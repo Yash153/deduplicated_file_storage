@@ -2,16 +2,10 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getFiles, deleteFile, downloadFile } from '../services/fileService';
 import { FileResponse } from '../types/file';
 import { useState } from 'react';
+import type { FileFilters as FileFiltersType } from '../types/file';
 
 interface FileListProps {
-  filters: {
-    search?: string;
-    fileType?: string;
-    minSize?: string;
-    maxSize?: string;
-    startDate?: string;
-    endDate?: string;
-  };
+  filters: FileFiltersType;
 }
 
 const FileListComponent = ({ filters }: FileListProps) => {
@@ -57,49 +51,47 @@ const FileListComponent = ({ filters }: FileListProps) => {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(dm) + ' ' + sizes[i]);
   };
 
-  if (isLoading) return <div className="p-4 text-center text-gray-500">Loading files...</div>;
-  if (error) return <div className="p-4 text-center text-red-500">Error loading files</div>;
+  if (isLoading) return <div className="p-4 text-center text-gray-500 dark:text-gray-400">Loading files...</div>;
+  if (error) return <div className="p-4 text-center text-red-500 dark:text-red-400">Error loading files</div>;
+  if (!files?.length) return <div className="p-4 text-center text-gray-500 dark:text-gray-400">No files found</div>;
 
   return (
-    <div className="overflow-x-auto shadow rounded-lg">
-      <table className="min-w-full divide-y divide-gray-200">
-        <thead className="bg-gray-50">
+    <div className="overflow-x-auto">
+      <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+        <thead className="bg-gray-50 dark:bg-gray-800">
           <tr>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Size</th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Upload Date</th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Name</th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Type</th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Size</th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Uploaded</th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Actions</th>
           </tr>
         </thead>
-        <tbody className="bg-white divide-y divide-gray-200">
-          {files?.map((file) => (
-            <tr key={file.id}>
-              <td className="px-6 py-4 whitespace-nowrap">
-                <div className="text-sm font-medium text-gray-900">{file.name}</div>
+        <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
+          {files.map((file) => (
+            <tr key={file.id} className="hover:bg-gray-50 dark:hover:bg-gray-800">
+              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
+                {file.name}
+              </td>
+              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                {file.file_type.toUpperCase()}
+              </td>
+              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                {formatBytes(file.size)}
+              </td>
+              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                {new Date(file.upload_date).toLocaleDateString()}
               </td>
               <td className="px-6 py-4 whitespace-nowrap">
-                <div className="text-sm text-gray-500 uppercase">{file.file_type}</div>
-              </td>
-              <td className="px-6 py-4 whitespace-nowrap">
-                <div className="text-sm text-gray-500">{formatBytes(file.size)}</div>
-              </td>
-              <td className="px-6 py-4 whitespace-nowrap">
-                <div className="text-sm text-gray-500">
-                  {new Date(file.upload_date).toLocaleDateString()}
-                </div>
-              </td>
-              <td className="px-6 py-4 whitespace-nowrap">
-                {file.is_duplicate ? (
-                  <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800">
-                    Duplicate
-                  </span>
-                ) : (
-                  <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
-                    Original
-                  </span>
-                )}
+                <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
+                  ${file.is_duplicate 
+                    ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' 
+                    : 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+                  }`}
+                >
+                  {file.is_duplicate ? 'Duplicate' : 'Unique'}
+                </span>
               </td>
               <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                 <button
@@ -120,11 +112,6 @@ const FileListComponent = ({ filters }: FileListProps) => {
           ))}
         </tbody>
       </table>
-      {files?.length === 0 && (
-        <div className="text-center py-8 text-gray-500 bg-white">
-          No files found matching your criteria
-        </div>
-      )}
     </div>
   );
 };
