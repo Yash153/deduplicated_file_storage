@@ -86,6 +86,12 @@ const FileList = ({ filters }: FileListProps) => {
             >
               Status {sortField === 'is_duplicate' && (sortOrder === 'asc' ? '↑' : '↓')}
             </th>
+            <th
+              scope="col"
+              className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+            >
+              Hash
+            </th>
           </tr>
         </thead>
         <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
@@ -111,6 +117,15 @@ const FileList = ({ filters }: FileListProps) => {
                 }`}>
                   {file.is_duplicate ? 'Duplicate' : 'Unique'}
                 </span>
+              </td>
+              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                {file.hash ? (
+                  <span title={file.hash} className="font-mono text-xs">
+                    {file.hash.substring(0, 8)}...
+                  </span>
+                ) : (
+                  'Calculating...'
+                )}
               </td>
             </tr>
           ))}

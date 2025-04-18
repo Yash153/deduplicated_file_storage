@@ -4,8 +4,8 @@ from .models import File
 class FileSerializer(serializers.ModelSerializer):
     class Meta:
         model = File
-        fields = ['id', 'name', 'file', 'size', 'file_type', 'upload_date', 'is_duplicate', 'original_file']
-        read_only_fields = ['id', 'name', 'size', 'file_type', 'upload_date', 'is_duplicate', 'original_file']
+        fields = ['id', 'name', 'file', 'size', 'file_type', 'upload_date', 'is_duplicate', 'original_file', 'hash']
+        read_only_fields = ['id', 'name', 'size', 'file_type', 'upload_date', 'is_duplicate', 'original_file', 'hash']
 
     def create(self, validated_data):
         # The name will be set in the model's save() method

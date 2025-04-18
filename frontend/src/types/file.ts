@@ -6,6 +6,7 @@ export interface FileResponse {
   upload_date: string;
   is_duplicate: boolean;
   original_file?: number;
+  hash?: string;
 }
 
 export interface StorageStats {

@@ -94,6 +94,6 @@ class FileViewSet(viewsets.ModelViewSet):
     
     @action(detail=False, methods=['get'])
     def file_types(self, request):
-        # Get unique file types from the database
-        file_types = File.objects.values_list('file_type', flat=True).distinct()
-        return Response(list(file_types))
+        # Get all file types and convert to set to get unique values
+        file_types = set(File.objects.values_list('file_type', flat=True))
+        return Response(sorted(list(file_types)))  # Sort the list for consistent order
