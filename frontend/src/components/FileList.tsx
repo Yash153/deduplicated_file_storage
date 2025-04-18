@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { getFiles } from '../services/fileService';
 import type { FileResponse, FileFilters, PaginatedResponse } from '../types/file';
@@ -86,12 +86,6 @@ const FileList = ({ filters }: FileListProps) => {
             >
               Status {sortField === 'is_duplicate' && (sortOrder === 'asc' ? '↑' : '↓')}
             </th>
-            <th
-              scope="col"
-              className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
-            >
-              Hash
-            </th>
           </tr>
         </thead>
         <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
@@ -118,41 +112,29 @@ const FileList = ({ filters }: FileListProps) => {
                   {file.is_duplicate ? 'Duplicate' : 'Unique'}
                 </span>
               </td>
-              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                {file.hash ? (
-                  <span title={file.hash} className="font-mono text-xs">
-                    {file.hash.substring(0, 8)}...
-                  </span>
-                ) : (
-                  'Calculating...'
-                )}
-              </td>
             </tr>
           ))}
         </tbody>
       </table>
-
       {data.pages > 1 && (
         <div className="mt-4 flex justify-center">
-          <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
-            <button
-              onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-              disabled={currentPage === 1}
-              className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm font-medium text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50"
-            >
-              Previous
-            </button>
-            <span className="relative inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm font-medium text-gray-700 dark:text-gray-300">
-              Page {currentPage} of {data.pages}
-            </span>
-            <button
-              onClick={() => setCurrentPage(prev => Math.min(prev + 1, data.pages))}
-              disabled={currentPage === data.pages}
-              className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm font-medium text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50"
-            >
-              Next
-            </button>
-          </nav>
+          <button
+            onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+            disabled={currentPage === 1}
+            className="px-4 py-2 mx-1 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700 disabled:opacity-50"
+          >
+            Previous
+          </button>
+          <span className="px-4 py-2 mx-1 text-sm font-medium text-gray-700 dark:text-gray-300">
+            Page {currentPage} of {data.pages}
+          </span>
+          <button
+            onClick={() => setCurrentPage(prev => Math.min(prev + 1, data.pages))}
+            disabled={currentPage === data.pages}
+            className="px-4 py-2 mx-1 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700 disabled:opacity-50"
+          >
+            Next
+          </button>
         </div>
       )}
     </div>

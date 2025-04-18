@@ -1,65 +1,111 @@
-import { useCallback, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { useDropzone } from 'react-dropzone';
+import { useTheme } from '../context/ThemeContext';
 import { uploadFile } from '../services/fileService';
 import { useQueryClient } from '@tanstack/react-query';
+import toast from 'react-hot-toast';
 
-const FileUpload = () => {
-  const [isUploading, setIsUploading] = useState(false);
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+const ALLOWED_FILE_TYPES = [
+  'image/jpeg',
+  'image/png',
+  'application/pdf',
+  'text/plain',
+  'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+];
+
+interface UploadProgress {
+  [key: string]: number;
+}
+
+const FileUpload: React.FC = () => {
+  const { isDarkMode } = useTheme();
+  const [uploadProgress, setUploadProgress] = useState<UploadProgress>({});
   const queryClient = useQueryClient();
 
-  const onDrop = useCallback(async (acceptedFiles: File[]) => {
-    setIsUploading(true);
-    try {
-      for (const file of acceptedFiles) {
-        await uploadFile(file);
-      }
-      queryClient.invalidateQueries({ queryKey: ['files'] });
-      queryClient.invalidateQueries({ queryKey: ['stats'] });
-    } catch (error) {
-      console.error('Upload failed:', error);
-    } finally {
-      setIsUploading(false);
+  const validateFile = (file: File) => {
+    if (file.size > MAX_FILE_SIZE) {
+      return 'File size exceeds 10MB limit';
     }
+    if (!ALLOWED_FILE_TYPES.includes(file.type)) {
+      return 'File type not allowed';
+    }
+    return null;
+  };
+
+  const onDrop = useCallback(async (acceptedFiles: File[]) => {
+    const uploadPromises = acceptedFiles.map(async (file) => {
+      const error = validateFile(file);
+      if (error) {
+        toast.error(`Error uploading ${file.name}: ${error}`);
+        return;
+      }
+
+      try {
+        const progressCallback = (progress: number) => {
+          setUploadProgress(prev => ({
+            ...prev,
+            [file.name]: progress
+          }));
+        };
+
+        await uploadFile(file);
+        toast.success(`${file.name} uploaded successfully`);
+      } catch (error) {
+        toast.error(`Error uploading ${file.name}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      }
+    });
+
+    await Promise.all(uploadPromises);
+    setUploadProgress({});
+    queryClient.invalidateQueries({ queryKey: ['files'] });
+    queryClient.invalidateQueries({ queryKey: ['stats'] });
   }, [queryClient]);
 
-  const { getRootProps, getInputProps, isDragActive } = useDropzone({ onDrop });
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+    onDrop,
+    maxSize: MAX_FILE_SIZE,
+    accept: {
+      'image/*': ['.jpeg', '.jpg', '.png'],
+      'application/pdf': ['.pdf'],
+      'text/plain': ['.txt'],
+      'application/msword': ['.doc'],
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx']
+    }
+  });
 
   return (
-    <div className="mb-6">
-      <div
-        {...getRootProps()}
-        className={`p-8 border-2 border-dashed rounded-lg text-center cursor-pointer transition-colors
-          ${isDragActive 
-            ? 'border-blue-500 bg-blue-50 dark:border-blue-400 dark:bg-blue-900/30' 
-            : 'border-gray-300 dark:border-gray-600 hover:border-blue-500 dark:hover:border-blue-400'
-          }`}
-      >
-        <input {...getInputProps()} />
-        {isUploading ? (
-          <div className="text-gray-600 dark:text-gray-300">
-            <svg className="animate-spin h-8 w-8 mx-auto mb-2 text-blue-500 dark:text-blue-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-            </svg>
-            Uploading...
-          </div>
-        ) : (
-          <div className="text-gray-600 dark:text-gray-300">
-            <svg className="mx-auto h-12 w-12 text-gray-400 dark:text-gray-500" stroke="currentColor" fill="none" viewBox="0 0 48 48">
-              <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-            <p className="mt-2 text-sm">
-              {isDragActive
-                ? 'Drop the files here'
-                : 'Drag and drop files here, or click to select files'
-              }
-            </p>
-            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-              Supported formats: Any file type
-            </p>
-          </div>
-        )}
+    <div
+      {...getRootProps()}
+      className={`p-6 border-2 border-dashed rounded-lg text-center cursor-pointer transition-colors ${
+        isDragActive
+          ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
+          : `border-gray-300 dark:border-gray-600 hover:border-blue-500 ${
+              isDarkMode ? 'bg-gray-800' : 'bg-white'
+            }`
+      }`}
+    >
+      <input {...getInputProps()} />
+      <div className="space-y-2">
+        <p className="text-lg font-medium">
+          {isDragActive ? 'Drop the files here' : 'Drag and drop files here, or click to select files'}
+        </p>
+        <p className="text-sm text-gray-500 dark:text-gray-400">
+          Supported formats: JPG, PNG, PDF, TXT, DOC, DOCX (Max 10MB)
+        </p>
       </div>
+      {Object.entries(uploadProgress).map(([fileName, progress]) => (
+        <div key={fileName} className="mt-4">
+          <p className="text-sm mb-1">{fileName}</p>
+          <div className="w-full bg-gray-200 rounded-full h-2.5 dark:bg-gray-700">
+            <div
+              className="bg-blue-600 h-2.5 rounded-full"
+              style={{ width: `${progress}%` }}
+            ></div>
+          </div>
+        </div>
+      ))}
     </div>
   );
 };

@@ -1,8 +1,8 @@
 import { useQuery } from '@tanstack/react-query';
 import { getStorageStats } from '../services/fileService';
-import type { StorageStats } from '../types/file';
+import type { StorageStats as StorageStatsType } from '../types/file';
 
-const StorageStatsComponent = () => {
+const StorageStats = () => {
   const { data: stats, isLoading, error } = useQuery({
     queryKey: ['stats'],
     queryFn: getStorageStats,
@@ -50,4 +50,4 @@ const StorageStatsComponent = () => {
   );
 };
 
-export default StorageStatsComponent;
+export default StorageStats;
