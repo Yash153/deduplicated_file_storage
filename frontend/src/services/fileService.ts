@@ -1,7 +1,14 @@
 import axios from 'axios';
 import { FileResponse, StorageStats, FileFilters } from '../types/file';
 
-const API_URL = process.env.REACT_APP_API_URL;
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000/api';
+
+export interface PaginatedResponse<T> {
+  results: T[];
+  total: number;
+  pages: number;
+  current_page: number;
+}
 
 export const uploadFile = async (file: File): Promise<FileResponse> => {
   const formData = new FormData();
@@ -16,17 +23,25 @@ export const uploadFile = async (file: File): Promise<FileResponse> => {
   return response.data;
 };
 
-export const getFiles = async (filters: FileFilters = {}): Promise<FileResponse[]> => {
+export const getFiles = async (filters: {
+  search?: string;
+  fileType?: string;
+  minSize?: string;
+  maxSize?: string;
+  startDate?: string;
+  endDate?: string;
+}, page: number = 1, perPage: number = 10): Promise<PaginatedResponse<FileResponse>> => {
   const params = new URLSearchParams();
-  
   if (filters.search) params.append('search', filters.search);
   if (filters.fileType) params.append('file_type', filters.fileType);
   if (filters.minSize) params.append('min_size', filters.minSize);
   if (filters.maxSize) params.append('max_size', filters.maxSize);
   if (filters.startDate) params.append('start_date', filters.startDate);
   if (filters.endDate) params.append('end_date', filters.endDate);
+  params.append('page', page.toString());
+  params.append('per_page', perPage.toString());
 
-  const response = await axios.get<FileResponse[]>(`${API_URL}/files/`, { params });
+  const response = await axios.get<PaginatedResponse<FileResponse>>(`${API_URL}/files/?${params}`);
   return response.data;
 };
 
