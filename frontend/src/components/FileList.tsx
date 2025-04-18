@@ -1,161 +1,113 @@
-import React, { useEffect, useState } from 'react';
-import { useTheme } from '../context/ThemeContext';
-import { FileResponse } from '../types/file';
-import type { FileFilters } from '../types/file';
+import { useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { getFiles } from '../services/fileService';
-
-const ITEMS_PER_PAGE = 10;
+import type { FileResponse, FileFilters, PaginatedResponse } from '../types/file';
+import { useTheme } from '../context/ThemeContext';
 
 interface FileListProps {
   filters: FileFilters;
 }
 
-type SortField = 'name' | 'size' | 'upload_date' | null;
+type SortField = 'name' | 'file_type' | 'size' | 'upload_date' | 'is_duplicate';
 type SortOrder = 'asc' | 'desc';
 
-const FileList: React.FC<FileListProps> = ({ filters }) => {
-  const { theme } = useTheme();
-  const [files, setFiles] = useState<FileResponse[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+const ITEMS_PER_PAGE = 10;
+
+const FileList = ({ filters }: FileListProps) => {
   const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [totalItems, setTotalItems] = useState(0);
-  const [sortField, setSortField] = useState<SortField>(null);
-  const [sortOrder, setSortOrder] = useState<SortOrder>('asc');
+  const [sortField, setSortField] = useState<SortField>('upload_date');
+  const [sortOrder, setSortOrder] = useState<SortOrder>('desc');
+  const { isDarkMode } = useTheme();
 
-  useEffect(() => {
-    const fetchFiles = async () => {
-      try {
-        setLoading(true);
-        const response = await getFiles(filters, currentPage, ITEMS_PER_PAGE, sortField, sortOrder);
-        setFiles(response.results);
-        setTotalPages(response.pages);
-        setTotalItems(response.total);
-        setError(null);
-      } catch (err) {
-        setError('Failed to fetch files');
-        console.error('Error fetching files:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchFiles();
-  }, [filters, currentPage, sortField, sortOrder]);
-
-  const handlePageChange = (newPage: number) => {
-    if (newPage >= 1 && newPage <= totalPages) {
-      setCurrentPage(newPage);
-    }
-  };
+  const { data, isLoading, error: queryError } = useQuery<PaginatedResponse<FileResponse>>({
+    queryKey: ['files', filters, currentPage, sortField, sortOrder],
+    queryFn: () => getFiles(filters, currentPage, ITEMS_PER_PAGE, sortField, sortOrder)
+  });
 
   const handleSort = (field: SortField) => {
-    if (sortField === field) {
-      // Toggle sort order if clicking the same field
+    if (field === sortField) {
       setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
     } else {
-      // Set new sort field and default to ascending
       setSortField(field);
       setSortOrder('asc');
     }
-    // Reset to first page when sorting changes
-    setCurrentPage(1);
   };
 
-  const getSortIcon = (field: SortField) => {
-    if (sortField !== field) return null;
-    return (
-      <span className={`ml-1 ${theme === 'dark' ? 'text-blue-400' : 'text-blue-600'}`}>
-        {sortOrder === 'asc' ? '↑' : '↓'}
-      </span>
-    );
+  const formatBytes = (bytes: number, decimals = 2) => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const dm = decimals < 0 ? 0 : decimals;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
   };
 
-  if (loading) {
-    return (
-      <div className={`text-center py-8 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
-        Loading files...
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className={`text-center py-8 ${theme === 'dark' ? 'text-red-400' : 'text-red-600'}`}>
-        {error}
-      </div>
-    );
-  }
-
-  if (files.length === 0) {
-    return (
-      <div className={`text-center py-8 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
-        No files found
-      </div>
-    );
-  }
+  if (isLoading) return <div className="p-4 text-center text-gray-500 dark:text-gray-400">Loading files...</div>;
+  if (queryError) return <div className="p-4 text-center text-red-500 dark:text-red-400">Error loading files</div>;
+  if (!data?.results.length) return <div className="p-4 text-center text-gray-500 dark:text-gray-400">No files found</div>;
 
   return (
     <div className="overflow-x-auto">
       <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-        <thead className={`${theme === 'dark' ? 'bg-gray-700' : 'bg-gray-50'}`}>
+        <thead className="bg-gray-50 dark:bg-gray-800">
           <tr>
-            <th 
-              className={`px-6 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer hover:bg-gray-600 dark:hover:bg-gray-600 ${theme === 'dark' ? 'text-gray-200' : 'text-gray-500'}`}
+            <th
+              scope="col"
+              className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer"
               onClick={() => handleSort('name')}
             >
-              <div className="flex items-center">
-                Name
-                {getSortIcon('name')}
-              </div>
+              Name {sortField === 'name' && (sortOrder === 'asc' ? '↑' : '↓')}
             </th>
-            <th className={`px-6 py-3 text-left text-xs font-medium uppercase tracking-wider ${theme === 'dark' ? 'text-gray-200' : 'text-gray-500'}`}>
-              Type
+            <th
+              scope="col"
+              className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer"
+              onClick={() => handleSort('file_type')}
+            >
+              Type {sortField === 'file_type' && (sortOrder === 'asc' ? '↑' : '↓')}
             </th>
-            <th 
-              className={`px-6 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer hover:bg-gray-600 dark:hover:bg-gray-600 ${theme === 'dark' ? 'text-gray-200' : 'text-gray-500'}`}
+            <th
+              scope="col"
+              className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer"
               onClick={() => handleSort('size')}
             >
-              <div className="flex items-center">
-                Size
-                {getSortIcon('size')}
-              </div>
+              Size {sortField === 'size' && (sortOrder === 'asc' ? '↑' : '↓')}
             </th>
-            <th 
-              className={`px-6 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer hover:bg-gray-600 dark:hover:bg-gray-600 ${theme === 'dark' ? 'text-gray-200' : 'text-gray-500'}`}
+            <th
+              scope="col"
+              className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer"
               onClick={() => handleSort('upload_date')}
             >
-              <div className="flex items-center">
-                Upload Date
-                {getSortIcon('upload_date')}
-              </div>
+              Upload Date {sortField === 'upload_date' && (sortOrder === 'asc' ? '↑' : '↓')}
             </th>
-            <th className={`px-6 py-3 text-left text-xs font-medium uppercase tracking-wider ${theme === 'dark' ? 'text-gray-200' : 'text-gray-500'}`}>
-              Status
+            <th
+              scope="col"
+              className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer"
+              onClick={() => handleSort('is_duplicate')}
+            >
+              Status {sortField === 'is_duplicate' && (sortOrder === 'asc' ? '↑' : '↓')}
             </th>
           </tr>
         </thead>
-        <tbody className={`${theme === 'dark' ? 'bg-gray-900 divide-gray-700' : 'bg-white divide-gray-200'}`}>
-          {files.map((file) => (
-            <tr key={file.id}>
-              <td className={`px-6 py-4 whitespace-nowrap ${theme === 'dark' ? 'text-gray-300' : 'text-gray-900'}`}>
+        <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
+          {data.results.map((file) => (
+            <tr key={file.id} className="hover:bg-gray-50 dark:hover:bg-gray-800">
+              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
                 {file.name}
               </td>
-              <td className={`px-6 py-4 whitespace-nowrap ${theme === 'dark' ? 'text-gray-300' : 'text-gray-900'}`}>
-                {file.file_type}
+              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                {file.file_type?.toUpperCase() || 'Unknown'}
               </td>
-              <td className={`px-6 py-4 whitespace-nowrap ${theme === 'dark' ? 'text-gray-300' : 'text-gray-900'}`}>
+              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                 {formatBytes(file.size)}
               </td>
-              <td className={`px-6 py-4 whitespace-nowrap ${theme === 'dark' ? 'text-gray-300' : 'text-gray-900'}`}>
+              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                 {new Date(file.upload_date).toLocaleDateString()}
               </td>
               <td className="px-6 py-4 whitespace-nowrap">
                 <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                  file.is_duplicate
-                    ? `${theme === 'dark' ? 'bg-red-900/30 text-red-300' : 'bg-red-100 text-red-800'}`
-                    : `${theme === 'dark' ? 'bg-green-900/30 text-green-300' : 'bg-green-100 text-green-800'}`
+                  !file.is_duplicate
+                    ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+                    : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
                 }`}>
                   {file.is_duplicate ? 'Duplicate' : 'Unique'}
                 </span>
@@ -165,94 +117,31 @@ const FileList: React.FC<FileListProps> = ({ filters }) => {
         </tbody>
       </table>
 
-      {/* Pagination */}
-      <div className="flex items-center justify-between border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-4 py-3 sm:px-6">
-        <div className="flex flex-1 justify-between sm:hidden">
-          <button
-            onClick={() => handlePageChange(currentPage - 1)}
-            disabled={currentPage === 1}
-            className={`relative inline-flex items-center rounded-md border border-gray-300 dark:border-gray-600 px-4 py-2 text-sm font-medium ${
-              theme === 'dark'
-                ? 'text-gray-300 bg-gray-800 hover:bg-gray-700'
-                : 'text-gray-700 bg-white hover:bg-gray-50'
-            }`}
-          >
-            Previous
-          </button>
-          <button
-            onClick={() => handlePageChange(currentPage + 1)}
-            disabled={currentPage === totalPages}
-            className={`relative ml-3 inline-flex items-center rounded-md border border-gray-300 dark:border-gray-600 px-4 py-2 text-sm font-medium ${
-              theme === 'dark'
-                ? 'text-gray-300 bg-gray-800 hover:bg-gray-700'
-                : 'text-gray-700 bg-white hover:bg-gray-50'
-            }`}
-          >
-            Next
-          </button>
+      {data.pages > 1 && (
+        <div className="mt-4 flex justify-center">
+          <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+            <button
+              onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+              disabled={currentPage === 1}
+              className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm font-medium text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50"
+            >
+              Previous
+            </button>
+            <span className="relative inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm font-medium text-gray-700 dark:text-gray-300">
+              Page {currentPage} of {data.pages}
+            </span>
+            <button
+              onClick={() => setCurrentPage(prev => Math.min(prev + 1, data.pages))}
+              disabled={currentPage === data.pages}
+              className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm font-medium text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50"
+            >
+              Next
+            </button>
+          </nav>
         </div>
-        <div className="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
-          <div>
-            <p className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-700'}`}>
-              Showing <span className="font-medium">{((currentPage - 1) * ITEMS_PER_PAGE) + 1}</span> to{' '}
-              <span className="font-medium">
-                {Math.min(currentPage * ITEMS_PER_PAGE, totalItems)}
-              </span>{' '}
-              of <span className="font-medium">{totalItems}</span> results
-            </p>
-          </div>
-          <div>
-            <nav className="isolate inline-flex -space-x-px rounded-md shadow-sm" aria-label="Pagination">
-              <button
-                onClick={() => handlePageChange(currentPage - 1)}
-                disabled={currentPage === 1}
-                className={`relative inline-flex items-center rounded-l-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 dark:ring-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800 focus:z-20 focus:outline-offset-0 ${
-                  theme === 'dark' ? 'bg-gray-800' : 'bg-white'
-                }`}
-              >
-                <span className="sr-only">Previous</span>
-                <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                  <path fillRule="evenodd" d="M12.79 5.23a.75.75 0 01-.02 1.06L8.832 10l3.938 3.71a.75.75 0 11-1.04 1.08l-4.5-4.25a.75.75 0 010-1.08l4.5-4.25a.75.75 0 011.06.02z" clipRule="evenodd" />
-                </svg>
-              </button>
-              {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                <button
-                  key={page}
-                  onClick={() => handlePageChange(page)}
-                  className={`relative inline-flex items-center px-4 py-2 text-sm font-semibold ${
-                    page === currentPage
-                      ? `${theme === 'dark' ? 'bg-blue-600 text-white' : 'bg-blue-600 text-white'}`
-                      : `${theme === 'dark' ? 'text-gray-400 hover:bg-gray-800' : 'text-gray-900 hover:bg-gray-50'}`
-                  } ring-1 ring-inset ring-gray-300 dark:ring-gray-600 focus:z-20 focus:outline-offset-0`}
-                >
-                  {page}
-                </button>
-              ))}
-              <button
-                onClick={() => handlePageChange(currentPage + 1)}
-                disabled={currentPage === totalPages}
-                className={`relative inline-flex items-center rounded-r-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 dark:ring-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800 focus:z-20 focus:outline-offset-0 ${
-                  theme === 'dark' ? 'bg-gray-800' : 'bg-white'
-                }`}
-              >
-                <span className="sr-only">Next</span>
-                <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                  <path fillRule="evenodd" d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z" clipRule="evenodd" />
-                </svg>
-              </button>
-            </nav>
-          </div>
-        </div>
-      </div>
+      )}
     </div>
   );
-};
-
-const formatBytes = (bytes: number): string => {
-  const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-  if (bytes === 0) return '0 Bytes';
-  const i = Math.floor(Math.log(bytes) / Math.log(1024));
-  return `${parseFloat((bytes / Math.pow(1024, i)).toFixed(2))} ${sizes[i]}`;
 };
 
 export default FileList;

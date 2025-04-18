@@ -1,12 +1,11 @@
 export interface FileResponse {
   id: number;
   name: string;
-  file: string;
-  size: number;
   file_type: string;
+  size: number;
   upload_date: string;
   is_duplicate: boolean;
-  original_file: number | null;
+  original_file?: number;
 }
 
 export interface StorageStats {
@@ -19,8 +18,15 @@ export interface StorageStats {
 export interface FileFilters {
   search?: string;
   fileType?: string;
-  minSize?: string;
-  maxSize?: string;
+  minSize?: number;
+  maxSize?: number;
   startDate?: string;
   endDate?: string;
+}
+
+export interface PaginatedResponse<T> {
+  results: T[];
+  total: number;
+  pages: number;
+  current_page: number;
 }

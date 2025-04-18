@@ -14,8 +14,8 @@ function App() {
   const [filters, setFilters] = useState<FileFiltersType>({
     search: '',
     fileType: '',
-    minSize: '',
-    maxSize: '',
+    minSize: undefined,
+    maxSize: undefined,
     startDate: '',
     endDate: '',
   });

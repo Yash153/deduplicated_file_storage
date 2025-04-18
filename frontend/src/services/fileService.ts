@@ -33,8 +33,8 @@ export const getFiles = async (
   const params = new URLSearchParams();
   if (filters.search) params.append('search', filters.search);
   if (filters.fileType) params.append('file_type', filters.fileType);
-  if (filters.minSize) params.append('min_size', filters.minSize);
-  if (filters.maxSize) params.append('max_size', filters.maxSize);
+  if (filters.minSize) params.append('min_size', filters.minSize.toString());
+  if (filters.maxSize) params.append('max_size', filters.maxSize.toString());
   if (filters.startDate) params.append('start_date', filters.startDate);
   if (filters.endDate) params.append('end_date', filters.endDate);
   params.append('page', page.toString());
