@@ -10,6 +10,9 @@ interface FileListProps {
   filters: FileFilters;
 }
 
+type SortField = 'name' | 'size' | 'upload_date' | null;
+type SortOrder = 'asc' | 'desc';
+
 const FileList: React.FC<FileListProps> = ({ filters }) => {
   const { theme } = useTheme();
   const [files, setFiles] = useState<FileResponse[]>([]);
@@ -18,12 +21,14 @@ const FileList: React.FC<FileListProps> = ({ filters }) => {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
+  const [sortField, setSortField] = useState<SortField>(null);
+  const [sortOrder, setSortOrder] = useState<SortOrder>('asc');
 
   useEffect(() => {
     const fetchFiles = async () => {
       try {
         setLoading(true);
-        const response = await getFiles(filters, currentPage, ITEMS_PER_PAGE);
+        const response = await getFiles(filters, currentPage, ITEMS_PER_PAGE, sortField, sortOrder);
         setFiles(response.results);
         setTotalPages(response.pages);
         setTotalItems(response.total);
@@ -37,12 +42,34 @@ const FileList: React.FC<FileListProps> = ({ filters }) => {
     };
 
     fetchFiles();
-  }, [filters, currentPage]);
+  }, [filters, currentPage, sortField, sortOrder]);
 
   const handlePageChange = (newPage: number) => {
     if (newPage >= 1 && newPage <= totalPages) {
       setCurrentPage(newPage);
     }
+  };
+
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      // Toggle sort order if clicking the same field
+      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+    } else {
+      // Set new sort field and default to ascending
+      setSortField(field);
+      setSortOrder('asc');
+    }
+    // Reset to first page when sorting changes
+    setCurrentPage(1);
+  };
+
+  const getSortIcon = (field: SortField) => {
+    if (sortField !== field) return null;
+    return (
+      <span className={`ml-1 ${theme === 'dark' ? 'text-blue-400' : 'text-blue-600'}`}>
+        {sortOrder === 'asc' ? '↑' : '↓'}
+      </span>
+    );
   };
 
   if (loading) {
@@ -74,17 +101,35 @@ const FileList: React.FC<FileListProps> = ({ filters }) => {
       <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
         <thead className={`${theme === 'dark' ? 'bg-gray-700' : 'bg-gray-50'}`}>
           <tr>
-            <th className={`px-6 py-3 text-left text-xs font-medium uppercase tracking-wider ${theme === 'dark' ? 'text-gray-200' : 'text-gray-500'}`}>
-              Name
+            <th 
+              className={`px-6 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer hover:bg-gray-600 dark:hover:bg-gray-600 ${theme === 'dark' ? 'text-gray-200' : 'text-gray-500'}`}
+              onClick={() => handleSort('name')}
+            >
+              <div className="flex items-center">
+                Name
+                {getSortIcon('name')}
+              </div>
             </th>
             <th className={`px-6 py-3 text-left text-xs font-medium uppercase tracking-wider ${theme === 'dark' ? 'text-gray-200' : 'text-gray-500'}`}>
               Type
             </th>
-            <th className={`px-6 py-3 text-left text-xs font-medium uppercase tracking-wider ${theme === 'dark' ? 'text-gray-200' : 'text-gray-500'}`}>
-              Size
+            <th 
+              className={`px-6 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer hover:bg-gray-600 dark:hover:bg-gray-600 ${theme === 'dark' ? 'text-gray-200' : 'text-gray-500'}`}
+              onClick={() => handleSort('size')}
+            >
+              <div className="flex items-center">
+                Size
+                {getSortIcon('size')}
+              </div>
             </th>
-            <th className={`px-6 py-3 text-left text-xs font-medium uppercase tracking-wider ${theme === 'dark' ? 'text-gray-200' : 'text-gray-500'}`}>
-              Upload Date
+            <th 
+              className={`px-6 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer hover:bg-gray-600 dark:hover:bg-gray-600 ${theme === 'dark' ? 'text-gray-200' : 'text-gray-500'}`}
+              onClick={() => handleSort('upload_date')}
+            >
+              <div className="flex items-center">
+                Upload Date
+                {getSortIcon('upload_date')}
+              </div>
             </th>
             <th className={`px-6 py-3 text-left text-xs font-medium uppercase tracking-wider ${theme === 'dark' ? 'text-gray-200' : 'text-gray-500'}`}>
               Status

@@ -25,6 +25,8 @@ class FileViewSet(viewsets.ModelViewSet):
         max_size = self.request.query_params.get('max_size', '')
         start_date = self.request.query_params.get('start_date', '')
         end_date = self.request.query_params.get('end_date', '')
+        sort_field = self.request.query_params.get('sort', '')
+        sort_order = self.request.query_params.get('order', 'asc')
 
         if search:
             queryset = queryset.filter(name__icontains=search)
@@ -39,7 +41,23 @@ class FileViewSet(viewsets.ModelViewSet):
         if end_date:
             queryset = queryset.filter(upload_date__lte=end_date)
 
-        return queryset.order_by('-upload_date')
+        # Handle sorting
+        if sort_field:
+            # Handle case-insensitive sorting for name field
+            if sort_field == 'name':
+                if sort_order == 'asc':
+                    queryset = queryset.order_by(Lower('name'))
+                else:
+                    queryset = queryset.order_by(Lower('name').desc())
+            else:
+                # For other fields, use regular sorting
+                sort_prefix = '-' if sort_order == 'desc' else ''
+                queryset = queryset.order_by(f'{sort_prefix}{sort_field}')
+        else:
+            # Default sorting by upload date descending
+            queryset = queryset.order_by('-upload_date')
+
+        return queryset
 
     def list(self, request, *args, **kwargs):
         queryset = self.get_queryset()

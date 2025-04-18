@@ -23,14 +23,13 @@ export const uploadFile = async (file: File): Promise<FileResponse> => {
   return response.data;
 };
 
-export const getFiles = async (filters: {
-  search?: string;
-  fileType?: string;
-  minSize?: string;
-  maxSize?: string;
-  startDate?: string;
-  endDate?: string;
-}, page: number = 1, perPage: number = 10): Promise<PaginatedResponse<FileResponse>> => {
+export const getFiles = async (
+  filters: FileFilters,
+  page: number = 1,
+  perPage: number = 10,
+  sortField: string | null = null,
+  sortOrder: 'asc' | 'desc' = 'asc'
+): Promise<PaginatedResponse<FileResponse>> => {
   const params = new URLSearchParams();
   if (filters.search) params.append('search', filters.search);
   if (filters.fileType) params.append('file_type', filters.fileType);
@@ -40,6 +39,11 @@ export const getFiles = async (filters: {
   if (filters.endDate) params.append('end_date', filters.endDate);
   params.append('page', page.toString());
   params.append('per_page', perPage.toString());
+  
+  if (sortField) {
+    params.append('sort', sortField);
+    params.append('order', sortOrder);
+  }
 
   const response = await axios.get<PaginatedResponse<FileResponse>>(`${API_URL}/files/?${params}`);
   return response.data;
